@@ -6,7 +6,7 @@ from tkinter import ttk, messagebox
 # ---------------- LOGS ----------------
 logging.basicConfig(
     filename="sistema.log",
-    level=logging.ERROR,
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
@@ -45,8 +45,8 @@ class Cliente(Entidad):
             if "@" not in self.__correo:
                 raise ClienteError("Correo inválido")
         except Exception as e:
-            logging.error(e)
-            raise ClienteError("Error validando cliente") from e
+            logging.error(f"Error validando cliente: {e}")
+            raise ClienteError("Error en validación de cliente") from e
 
     def mostrar_info(self):
         return f"{self.__nombre} - {self.__correo}"
@@ -66,7 +66,7 @@ class Servicio(ABC):
     def descripcion(self):
         pass
 
-    # 🔥 Sobrecarga
+    # Sobrecarga
     def calcular_costo(self, horas, descuento=0, impuesto=0):
         base = horas * self.tarifa
         return base - (base * descuento) + (base * impuesto)
@@ -101,12 +101,13 @@ class Reserva:
                 raise ReservaError("Horas inválidas")
 
         except Exception as e:
-            logging.error(e)
-            raise ReservaError("Error al confirmar") from e
+            logging.error(f"Error en confirmación: {e}")
+            raise ReservaError("Error al confirmar reserva") from e
 
         else:
             total = self.servicio.calcular_costo(self.horas, impuesto=0.19)
             self.estado = "Confirmada"
+            logging.info(f"Reserva confirmada: {self.cliente.nombre} - {self.servicio.nombre}")
             return total
 
         finally:
@@ -114,11 +115,19 @@ class Reserva:
 
     def cancelar(self):
         self.estado = "Cancelada"
+        logging.warning(f"Reserva cancelada: {self.cliente.nombre}")
 
     def modificar(self, nuevas_horas):
-        if nuevas_horas <= 0:
-            raise ReservaError("Horas inválidas")
-        self.horas = nuevas_horas
+        try:
+            if nuevas_horas <= 0:
+                raise ReservaError("Horas inválidas")
+
+            self.horas = nuevas_horas
+            logging.info(f"Reserva modificada: {self.cliente.nombre} -> {nuevas_horas}h")
+
+        except Exception as e:
+            logging.error(f"Error al modificar reserva: {e}")
+            raise
 
 
 # ---------------- SISTEMA ----------------
@@ -128,38 +137,51 @@ class Sistema:
         self.reservas = []
 
     def agregar_cliente(self, nombre, correo):
-        cliente = Cliente(nombre, correo)
-        self.clientes.append(cliente)
-        return cliente
+        try:
+            cliente = Cliente(nombre, correo)
+            self.clientes.append(cliente)
+            logging.info(f"Cliente agregado: {nombre}")
+            return cliente
+        except Exception as e:
+            logging.error(f"Error al agregar cliente: {e}")
+            raise
 
     def crear_reserva(self, index_cliente, tipo_servicio, horas):
-        cliente = self.clientes[index_cliente]
+        try:
+            cliente = self.clientes[index_cliente]
 
-        if tipo_servicio == "Sala":
-            servicio = Sala("Sala", 50000)
-        elif tipo_servicio == "Equipo":
-            servicio = Equipo("Equipo", 30000)
-        else:
-            servicio = Asesoria("Asesoría", 80000)
+            if tipo_servicio == "Sala":
+                servicio = Sala("Sala", 50000)
+            elif tipo_servicio == "Equipo":
+                servicio = Equipo("Equipo", 30000)
+            else:
+                servicio = Asesoria("Asesoría", 80000)
 
-        reserva = Reserva(cliente, servicio, horas)
-        total = reserva.confirmar()
-        self.reservas.append(reserva)
+            reserva = Reserva(cliente, servicio, horas)
+            total = reserva.confirmar()
 
-        return reserva, total
+            self.reservas.append(reserva)
+
+            logging.info(f"Reserva creada: {cliente.nombre} - {tipo_servicio} - {horas}h")
+
+            return reserva, total
+
+        except Exception as e:
+            logging.error(f"Error al crear reserva: {e}")
+            raise
 
 
-# ---------------- INTERFAZ TTK ----------------
+# ---------------- INTERFAZ ----------------
 class App:
     def __init__(self, root):
         self.sistema = Sistema()
         self.root = root
-        self.root.title("Sistema Empresarial")
+        self.root.title("Sistema Empresarial de Reservas")
 
         self.frame = ttk.Frame(root, padding=15)
         self.frame.grid()
 
-        # -------- CLIENTES --------
+        # CLIENTE
         ttk.Label(self.frame, text="Nombre").grid(row=0, column=0)
         self.nombre = ttk.Entry(self.frame)
         self.nombre.grid(row=0, column=1)
@@ -170,7 +192,7 @@ class App:
 
         ttk.Button(self.frame, text="Agregar Cliente", command=self.agregar_cliente).grid(row=2, columnspan=2)
 
-        # -------- RESERVAS --------
+        # RESERVA
         ttk.Label(self.frame, text="Cliente").grid(row=3, column=0)
         self.combo_cliente = ttk.Combobox(self.frame, state="readonly")
         self.combo_cliente.grid(row=3, column=1)
@@ -185,23 +207,22 @@ class App:
 
         ttk.Button(self.frame, text="Crear Reserva", command=self.crear_reserva).grid(row=6, columnspan=2)
 
-        # -------- TABLA --------
+        # BOTONES EXTRA
+        ttk.Button(self.frame, text="Modificar", command=self.modificar_reserva).grid(row=7, column=0)
+        ttk.Button(self.frame, text="Cancelar", command=self.cancelar_reserva).grid(row=7, column=1)
+
+        # TABLA
         self.tree = ttk.Treeview(self.frame, columns=("Cliente", "Servicio", "Horas", "Estado"), show="headings")
-        self.tree.heading("Cliente", text="Cliente")
-        self.tree.heading("Servicio", text="Servicio")
-        self.tree.heading("Horas", text="Horas")
-        self.tree.heading("Estado", text="Estado")
-        self.tree.grid(row=7, columnspan=2, pady=10)
+        for col in ("Cliente", "Servicio", "Horas", "Estado"):
+            self.tree.heading(col, text=col)
+        self.tree.grid(row=8, columnspan=2, pady=10)
 
     def agregar_cliente(self):
         try:
             cliente = self.sistema.agregar_cliente(self.nombre.get(), self.correo.get())
-            messagebox.showinfo("OK", "Cliente agregado")
-
             self.combo_cliente["values"] = [c.nombre for c in self.sistema.clientes]
-
+            messagebox.showinfo("OK", "Cliente agregado")
         except Exception as e:
-            logging.error(e)
             messagebox.showerror("Error", str(e))
 
     def crear_reserva(self):
@@ -222,7 +243,48 @@ class App:
             messagebox.showinfo("Total", f"${total}")
 
         except Exception as e:
-            logging.error(e)
+            messagebox.showerror("Error", str(e))
+
+    def modificar_reserva(self):
+        try:
+            item = self.tree.selection()[0]
+            nuevas_horas = int(self.horas.get())
+
+            index = self.tree.index(item)
+            reserva = self.sistema.reservas[index]
+
+            reserva.modificar(nuevas_horas)
+
+            self.tree.item(item, values=(
+                reserva.cliente.nombre,
+                reserva.servicio.descripcion(),
+                reserva.horas,
+                reserva.estado
+            ))
+
+            messagebox.showinfo("OK", "Reserva modificada")
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
+    def cancelar_reserva(self):
+        try:
+            item = self.tree.selection()[0]
+            index = self.tree.index(item)
+            reserva = self.sistema.reservas[index]
+
+            reserva.cancelar()
+
+            self.tree.item(item, values=(
+                reserva.cliente.nombre,
+                reserva.servicio.descripcion(),
+                reserva.horas,
+                reserva.estado
+            ))
+
+            messagebox.showinfo("OK", "Reserva cancelada")
+
+        except Exception as e:
             messagebox.showerror("Error", str(e))
 
 
