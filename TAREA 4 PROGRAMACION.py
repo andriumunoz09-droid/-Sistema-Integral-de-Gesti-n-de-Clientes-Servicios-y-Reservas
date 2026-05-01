@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 import logging
+import tkinter as tk
+from tkinter import ttk, messagebox
 
 # ---------------- LOGS ----------------
 logging.basicConfig(
@@ -12,10 +14,10 @@ logging.basicConfig(
 class ErrorSistema(Exception):
     pass
 
-class ClienteInvalidoError(ErrorSistema):
+class ClienteError(ErrorSistema):
     pass
 
-class ServicioNoDisponibleError(ErrorSistema):
+class ServicioError(ErrorSistema):
     pass
 
 class ReservaError(ErrorSistema):
@@ -39,12 +41,12 @@ class Cliente(Entidad):
     def validar(self):
         try:
             if not self.__nombre.strip():
-                raise ClienteInvalidoError("Nombre vacío")
+                raise ClienteError("Nombre vacío")
             if "@" not in self.__correo:
-                raise ClienteInvalidoError("Correo inválido")
+                raise ClienteError("Correo inválido")
         except Exception as e:
             logging.error(e)
-            raise ClienteInvalidoError("Error en validación de cliente") from e
+            raise ClienteError("Error validando cliente") from e
 
     def mostrar_info(self):
         return f"{self.__nombre} - {self.__correo}"
@@ -64,25 +66,25 @@ class Servicio(ABC):
     def descripcion(self):
         pass
 
-    # 🔥 Sobrecarga simulada
+    # 🔥 Sobrecarga
     def calcular_costo(self, horas, descuento=0, impuesto=0):
         base = horas * self.tarifa
-        total = base - (base * descuento) + (base * impuesto)
-        return total
+        return base - (base * descuento) + (base * impuesto)
 
 
-# ---------------- SERVICIOS ----------------
 class Sala(Servicio):
     def descripcion(self):
-        return "Reserva de sala"
+        return "Sala"
+
 
 class Equipo(Servicio):
     def descripcion(self):
-        return "Alquiler de equipos"
+        return "Equipo"
+
 
 class Asesoria(Servicio):
     def descripcion(self):
-        return "Asesoría especializada"
+        return "Asesoría"
 
 
 # ---------------- RESERVA ----------------
@@ -95,39 +97,28 @@ class Reserva:
 
     def confirmar(self):
         try:
-            if not isinstance(self.cliente, Cliente):
-                raise ReservaError("Cliente inválido")
-
             if self.horas <= 0:
                 raise ReservaError("Horas inválidas")
 
         except Exception as e:
             logging.error(e)
-            raise ReservaError("Error al confirmar reserva") from e
+            raise ReservaError("Error al confirmar") from e
 
         else:
-            costo = self.servicio.calcular_costo(self.horas, impuesto=0.19)
+            total = self.servicio.calcular_costo(self.horas, impuesto=0.19)
             self.estado = "Confirmada"
-            return f"Reserva confirmada - Total: ${costo}"
+            return total
 
         finally:
-            print("Proceso de confirmación ejecutado")
+            print("Intento de confirmación ejecutado")
 
     def cancelar(self):
         self.estado = "Cancelada"
-        return "Reserva cancelada"
 
     def modificar(self, nuevas_horas):
-        try:
-            if nuevas_horas <= 0:
-                raise ReservaError("Horas inválidas en modificación")
-
-            self.horas = nuevas_horas
-            return "Reserva modificada correctamente"
-
-        except Exception as e:
-            logging.error(e)
-            return "Error al modificar reserva"
+        if nuevas_horas <= 0:
+            raise ReservaError("Horas inválidas")
+        self.horas = nuevas_horas
 
 
 # ---------------- SISTEMA ----------------
@@ -136,57 +127,108 @@ class Sistema:
         self.clientes = []
         self.reservas = []
 
-    def agregar_cliente(self, cliente):
-        try:
-            if not isinstance(cliente, Cliente):
-                raise ClienteInvalidoError("Objeto no válido")
+    def agregar_cliente(self, nombre, correo):
+        cliente = Cliente(nombre, correo)
+        self.clientes.append(cliente)
+        return cliente
 
-            self.clientes.append(cliente)
+    def crear_reserva(self, index_cliente, tipo_servicio, horas):
+        cliente = self.clientes[index_cliente]
+
+        if tipo_servicio == "Sala":
+            servicio = Sala("Sala", 50000)
+        elif tipo_servicio == "Equipo":
+            servicio = Equipo("Equipo", 30000)
+        else:
+            servicio = Asesoria("Asesoría", 80000)
+
+        reserva = Reserva(cliente, servicio, horas)
+        total = reserva.confirmar()
+        self.reservas.append(reserva)
+
+        return reserva, total
+
+
+# ---------------- INTERFAZ TTK ----------------
+class App:
+    def __init__(self, root):
+        self.sistema = Sistema()
+        self.root = root
+        self.root.title("Sistema Empresarial")
+
+        self.frame = ttk.Frame(root, padding=15)
+        self.frame.grid()
+
+        # -------- CLIENTES --------
+        ttk.Label(self.frame, text="Nombre").grid(row=0, column=0)
+        self.nombre = ttk.Entry(self.frame)
+        self.nombre.grid(row=0, column=1)
+
+        ttk.Label(self.frame, text="Correo").grid(row=1, column=0)
+        self.correo = ttk.Entry(self.frame)
+        self.correo.grid(row=1, column=1)
+
+        ttk.Button(self.frame, text="Agregar Cliente", command=self.agregar_cliente).grid(row=2, columnspan=2)
+
+        # -------- RESERVAS --------
+        ttk.Label(self.frame, text="Cliente").grid(row=3, column=0)
+        self.combo_cliente = ttk.Combobox(self.frame, state="readonly")
+        self.combo_cliente.grid(row=3, column=1)
+
+        ttk.Label(self.frame, text="Servicio").grid(row=4, column=0)
+        self.combo_servicio = ttk.Combobox(self.frame, values=["Sala", "Equipo", "Asesoria"])
+        self.combo_servicio.grid(row=4, column=1)
+
+        ttk.Label(self.frame, text="Horas").grid(row=5, column=0)
+        self.horas = ttk.Entry(self.frame)
+        self.horas.grid(row=5, column=1)
+
+        ttk.Button(self.frame, text="Crear Reserva", command=self.crear_reserva).grid(row=6, columnspan=2)
+
+        # -------- TABLA --------
+        self.tree = ttk.Treeview(self.frame, columns=("Cliente", "Servicio", "Horas", "Estado"), show="headings")
+        self.tree.heading("Cliente", text="Cliente")
+        self.tree.heading("Servicio", text="Servicio")
+        self.tree.heading("Horas", text="Horas")
+        self.tree.heading("Estado", text="Estado")
+        self.tree.grid(row=7, columnspan=2, pady=10)
+
+    def agregar_cliente(self):
+        try:
+            cliente = self.sistema.agregar_cliente(self.nombre.get(), self.correo.get())
+            messagebox.showinfo("OK", "Cliente agregado")
+
+            self.combo_cliente["values"] = [c.nombre for c in self.sistema.clientes]
 
         except Exception as e:
             logging.error(e)
+            messagebox.showerror("Error", str(e))
 
-    def crear_reserva(self, cliente, servicio, horas):
+    def crear_reserva(self):
         try:
-            reserva = Reserva(cliente, servicio, horas)
-            resultado = reserva.confirmar()
-            self.reservas.append(reserva)
-            return resultado
+            index = self.combo_cliente.current()
+            tipo = self.combo_servicio.get()
+            horas = int(self.horas.get())
+
+            reserva, total = self.sistema.crear_reserva(index, tipo, horas)
+
+            self.tree.insert("", "end", values=(
+                reserva.cliente.nombre,
+                reserva.servicio.descripcion(),
+                reserva.horas,
+                reserva.estado
+            ))
+
+            messagebox.showinfo("Total", f"${total}")
 
         except Exception as e:
             logging.error(e)
-            return "Error en reserva"
+            messagebox.showerror("Error", str(e))
 
 
-# ---------------- SIMULACIÓN (10 OPERACIONES) ----------------
+# ---------------- MAIN ----------------
 if __name__ == "__main__":
-    sistema = Sistema()
-
-    operaciones = [
-        lambda: sistema.agregar_cliente(Cliente("Emerson", "correo@gmail.com")),
-        lambda: sistema.agregar_cliente(Cliente("", "mal")),  # error
-        lambda: sistema.crear_reserva(
-            Cliente("Ana", "ana@gmail.com"),
-            Sala("Sala VIP", 50000),
-            2
-        ),
-        lambda: sistema.crear_reserva(
-            Cliente("Luis", "luis@gmail.com"),
-            Equipo("Laptop", 30000),
-            -1  # error
-        ),
-        lambda: sistema.crear_reserva(
-            Cliente("Carlos", "carlos@gmail.com"),
-            Asesoria("Consultoría", 80000),
-            3
-        ),
-    ]
-
-    # Ejecutar mínimo 10 operaciones
-    for i in range(10):
-        try:
-            resultado = operaciones[i % len(operaciones)]()
-            print(f"Operación {i+1}: {resultado}")
-        except Exception as e:
-            print(f"Operación {i+1}: Error controlado -> {e}")
-            
+    root = tk.Tk()
+    app = App(root)
+    root.mainloop()
+    
