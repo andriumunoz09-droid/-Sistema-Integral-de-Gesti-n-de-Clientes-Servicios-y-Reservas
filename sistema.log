@@ -10,3 +10,16 @@
 2026-05-01 17:40:20,244 - INFO - Reserva modificada: JAVIER MARTINES -> 3h
 2026-05-01 17:40:24,193 - INFO - Reserva confirmada: JAVIER MARTINES - Sala
 2026-05-01 17:40:24,194 - INFO - Reserva creada: JAVIER MARTINES - Sala - 3h
+2026-05-01 20:57:20,047 - INFO - Cliente agregado: juan perez
+2026-05-01 20:57:28,961 - INFO - Reserva confirmada: juan perez - Equipo
+2026-05-01 20:57:28,963 - INFO - Reserva creada: juan perez - Equipo - 2
+2026-05-01 20:57:34,204 - INFO - Reserva confirmada: juan perez - Sala
+2026-05-01 20:57:34,205 - INFO - Reserva creada: juan perez - Sala - 2
+2026-05-01 20:57:37,763 - INFO - Reserva confirmada: juan perez - Asesoría
+2026-05-01 20:57:37,763 - INFO - Reserva creada: juan perez - Asesoria - 2
+2026-05-01 20:57:53,629 - INFO - Reserva confirmada: juan perez - Asesoría
+2026-05-01 20:57:53,630 - INFO - Reserva creada: juan perez -  - 2
+2026-05-01 20:58:03,503 - ERROR - Error validando cliente: Correo inválido
+2026-05-01 20:58:03,503 - ERROR - Error al agregar cliente: Error en validación de cliente
+2026-05-01 20:58:05,965 - ERROR - Error validando cliente: Correo inválido
+2026-05-01 20:58:05,965 - ERROR - Error al agregar cliente: Error en validación de cliente
