@@ -75,23 +75,18 @@ class Servicio(ABC):
 class Sala(Servicio):
     def descripcion(self):
         return "Sala"
-
     def unidad(self):
         return "Horas"
-
 
 class Equipo(Servicio):
     def descripcion(self):
         return "Equipo"
-
     def unidad(self):
         return "Cantidad"
-
 
 class Asesoria(Servicio):
     def descripcion(self):
         return "Asesoría"
-
     def unidad(self):
         return "Sesiones"
 
@@ -217,7 +212,19 @@ class App:
         self.cantidad = ttk.Entry(self.frame)
         self.cantidad.grid(row=5, column=1)
 
-        ttk.Button(self.frame, text="Crear Reserva", command=self.crear_reserva).grid(row=6, columnspan=2)
+        # VALIDACIÓN NUMÉRICA
+        vcmd = (root.register(self.validar_numeros), "%P")
+        self.cantidad.config(validate="key", validatecommand=vcmd)
+
+        # BOTÓN
+        self.btn_reserva = ttk.Button(self.frame, text="Crear Reserva", command=self.crear_reserva)
+        self.btn_reserva.grid(row=6, columnspan=2)
+        self.btn_reserva.config(state="disabled")
+
+        # EVENTOS VALIDACIÓN
+        self.combo_cliente.bind("<<ComboboxSelected>>", self.validar_formulario)
+        self.combo_servicio.bind("<<ComboboxSelected>>", self.validar_formulario)
+        self.cantidad.bind("<KeyRelease>", self.validar_formulario)
 
         ttk.Button(self.frame, text="Modificar", command=self.modificar_reserva).grid(row=7, column=0)
         ttk.Button(self.frame, text="Cancelar", command=self.cancelar_reserva).grid(row=7, column=1)
@@ -228,21 +235,42 @@ class App:
             self.tree.heading(col, text=col)
         self.tree.grid(row=8, columnspan=2, pady=10)
 
+        # 🔥 MODO PRUEBA
+        self.modo_prueba = tk.BooleanVar()
+        ttk.Checkbutton(
+            self.frame,
+            text="Modo prueba (permitir errores)",
+            variable=self.modo_prueba,
+            command=self.validar_formulario
+        ).grid(row=9, columnspan=2, pady=5)
+
+    # VALIDACIONES
+    def validar_numeros(self, valor):
+        return valor.isdigit() or valor == ""
+
+    def validar_formulario(self, event=None):
+        if self.modo_prueba.get():
+            self.btn_reserva.config(state="normal")
+            return
+
+        if self.combo_cliente.current() != -1 and self.combo_servicio.get() and self.cantidad.get():
+            self.btn_reserva.config(state="normal")
+        else:
+            self.btn_reserva.config(state="disabled")
+
     def actualizar_unidad(self, event):
         tipo = self.combo_servicio.get()
-
         if tipo == "Sala":
-            texto = "Horas"
+            self.label_unidad.config(text="Horas")
         elif tipo == "Equipo":
-            texto = "Cantidad"
+            self.label_unidad.config(text="Cantidad")
         else:
-            texto = "Sesiones"
+            self.label_unidad.config(text="Sesiones")
 
-        self.label_unidad.config(text=texto)
-
+    # ACCIONES
     def agregar_cliente(self):
         try:
-            cliente = self.sistema.agregar_cliente(self.nombre.get(), self.correo.get())
+            self.sistema.agregar_cliente(self.nombre.get(), self.correo.get())
             self.combo_cliente["values"] = [c.nombre for c in self.sistema.clientes]
             messagebox.showinfo("OK", "Cliente agregado")
         except Exception as e:
@@ -252,7 +280,18 @@ class App:
         try:
             index = self.combo_cliente.current()
             tipo = self.combo_servicio.get()
-            cantidad = int(self.cantidad.get())
+
+            if self.modo_prueba.get():
+                cantidad = int(self.cantidad.get()) if self.cantidad.get() else 0
+            else:
+                if index == -1:
+                    raise ValueError("Debe seleccionar un cliente")
+                if not tipo:
+                    raise ValueError("Debe seleccionar un servicio")
+                if not self.cantidad.get():
+                    raise ValueError("Debe ingresar cantidad")
+
+                cantidad = int(self.cantidad.get())
 
             reserva, total = self.sistema.crear_reserva(index, tipo, cantidad)
 
@@ -266,13 +305,13 @@ class App:
             messagebox.showinfo("Total", f"${total}")
 
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            logging.error(f"Error GUI: {e}")
+            messagebox.showerror("Error controlado", str(e))
 
     def modificar_reserva(self):
         try:
             item = self.tree.selection()[0]
             nueva_cantidad = int(self.cantidad.get())
-
             index = self.tree.index(item)
             reserva = self.sistema.reservas[index]
 

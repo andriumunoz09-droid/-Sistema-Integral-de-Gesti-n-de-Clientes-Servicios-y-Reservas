@@ -23,3 +23,26 @@
 2026-05-01 20:58:03,503 - ERROR - Error al agregar cliente: Error en validación de cliente
 2026-05-01 20:58:05,965 - ERROR - Error validando cliente: Correo inválido
 2026-05-01 20:58:05,965 - ERROR - Error al agregar cliente: Error en validación de cliente
+2026-05-02 14:40:16,523 - INFO - Cliente agregado: Carlos Rojas
+2026-05-02 14:40:29,277 - INFO - Reserva confirmada: Carlos Rojas - Equipo
+2026-05-02 14:40:29,284 - INFO - Reserva creada: Carlos Rojas - Equipo - 23
+2026-05-02 14:40:36,931 - INFO - Reserva modificada: Carlos Rojas -> 23
+2026-05-02 14:42:57,232 - ERROR - Error validando cliente: Correo inválido
+2026-05-02 14:42:57,237 - ERROR - Error al agregar cliente: Error en validación de cliente
+2026-05-02 14:43:03,730 - INFO - Cliente agregado: JUAN PEREZ
+2026-05-02 14:43:12,204 - INFO - Reserva confirmada: JUAN PEREZ - Equipo
+2026-05-02 14:43:12,205 - INFO - Reserva creada: JUAN PEREZ - Equipo - 1
+2026-05-02 14:43:21,214 - INFO - Reserva confirmada: JUAN PEREZ - Equipo
+2026-05-02 14:43:21,215 - INFO - Reserva creada: JUAN PEREZ - Equipo - 5
+2026-05-02 14:43:26,773 - INFO - Reserva modificada: JUAN PEREZ -> 5
+2026-05-02 14:43:29,691 - WARNING - Reserva cancelada: JUAN PEREZ
+2026-05-02 14:43:32,690 - WARNING - Reserva cancelada: JUAN PEREZ
+2026-05-02 14:43:35,308 - WARNING - Reserva cancelada: JUAN PEREZ
+2026-05-02 14:43:40,840 - ERROR - Error al modificar reserva: Cantidad inválida
+2026-05-02 14:43:43,454 - ERROR - Error al modificar reserva: Cantidad inválida
+2026-05-02 14:43:50,556 - WARNING - Reserva cancelada: JUAN PEREZ
+2026-05-02 14:44:28,379 - INFO - Cliente agregado: juan gomez
+2026-05-02 14:44:35,424 - ERROR - Error validando cliente: Correo inválido
+2026-05-02 14:44:35,425 - ERROR - Error al agregar cliente: Error en validación de cliente
+2026-05-02 14:44:39,658 - ERROR - Error validando cliente: Correo inválido
+2026-05-02 14:44:39,659 - ERROR - Error al agregar cliente: Error en validación de cliente
